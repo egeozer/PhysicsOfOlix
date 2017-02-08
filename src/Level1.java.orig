@@ -1,0 +1,82 @@
+import java.awt.Graphics;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.util.ArrayList;
+import javax.swing.Timer;
+
+
+public class Level1 extends Level  {
+
+	private Player player = new Player();
+	private ArrayList<ScoreObject> scoreObjects = new ArrayList<ScoreObject>();
+	private int gravity =5;
+
+	public Level1()
+	{
+		super();
+	}
+	@Override
+	public void actionPerformed(ActionEvent arg0) {
+		//System.out.println(t);
+		repaint();
+	}
+	
+	public static void main(String[]args){
+		new Level1();
+		
+	}
+	
+	@Override
+	public void paintComponent(Graphics g){
+		super.paintComponent(g);
+		player.paint(g,this);
+		//
+		if (player.isFalling(this)==true ){
+			//System.out.println(player.dy);
+			player.yVelocity+=gravity*.2;
+			player.yPos+=player.yVelocity*.2+.5*gravity*.2*.2;
+		}
+		if (player.yPos>=(this.getHeight()-player.radius))
+			player.setFalling(false);
+	}
+	@Override
+	public void keyPressed(KeyEvent e) {
+		if(e.getKeyCode()==KeyEvent.VK_RIGHT ){//delay gets bigger when user presses DOWN key
+			player.xPos += player.xVelocity;
+			//System.out.println("s");
+		}
+		if(e.getKeyCode()==KeyEvent.VK_LEFT ){//delay gets bigger when user presses DOWN key
+			player.xPos -= player.xVelocity;
+			//System.out.println("s");
+		}
+		if(e.getKeyCode()==KeyEvent.VK_SPACE ){//delay gets bigger when user presses DOWN key
+			player.setFalling(true);//
+			player.setYVelocity(50);
+		}
+	}
+
+	@Override
+	public void keyReleased(KeyEvent e) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void keyTyped(KeyEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public int calculateScore() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public int levelComplete() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+}

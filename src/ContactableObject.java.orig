@@ -1,0 +1,81 @@
+import java.awt.Graphics;
+
+
+public abstract class ContactableObject {
+	private boolean playerOn, polygonOn, contacted;
+	int xPos, yPos, width, height;
+	
+	public ContactableObject(){}
+	public ContactableObject(int x, int y)
+	{
+		xPos = x;
+		yPos = y;
+		playerOn = false;
+		polygonOn = false;
+		contacted = false;
+	}
+	public ContactableObject(int x, int y, int w, int h)
+	{
+		xPos = x;
+		yPos = y;
+		width = w;
+		height = h;
+		playerOn = false;
+		polygonOn = false;
+		contacted = false;
+	}
+	public  int getWidth() {
+		return width;
+	}
+	public void setWidth(int width) {
+		this.width = width;
+	}
+	public int getHeight() {
+		return height;
+	}
+	public void setHeight(int height) {
+		this.height = height;
+	}
+	
+	public void setXPos(int x)
+	{
+		xPos = x;
+	}
+	public void setYPos(int y)
+	{
+		yPos = y;
+	}
+	public void setPlayerOn(boolean p)
+	{
+		playerOn = p;
+	}
+	public void setPolygonOn(boolean p)
+	{
+		polygonOn = p;
+	}
+	public void setContacted(boolean c)
+	{
+		contacted = c;
+	}
+	public int getXPos()
+	{
+		return xPos;
+	}
+	public int getYPos()
+	{
+		return yPos;
+	}
+	public boolean isPlayerOn()
+	{
+		return playerOn;
+	}
+	public boolean isPolygonOn()
+	{
+		return polygonOn;
+	}
+	public boolean isContacted()
+	{
+		return contacted;
+	}
+	public abstract void paint(Graphics g, Level a);
+}

@@ -1,0 +1,24 @@
+import java.awt.Color;
+import java.awt.Graphics;
+import java.util.ArrayList;
+
+
+public class Sphere extends Polygon{
+	double xVelocity = 5;
+	double yVelocity = 0;
+	boolean falling;
+	
+	public Sphere(int x, int y, int w, int h, int m)
+	{
+		super(x, y, w, h, m);
+	}
+	public Sphere(int x, int y, int d, int m)
+	{
+		super(x, y, d, d, m);
+	}
+	@Override
+	public void paint(Graphics g, Level a) {
+		g.setColor(Color.blue);
+			g.drawOval(xPos,yPos,width,height);		
+	}
+}

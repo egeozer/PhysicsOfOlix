@@ -1,0 +1,18 @@
+import java.awt.Graphics;
+
+import javax.swing.ImageIcon;
+
+public class Key extends Collectible{
+	private ImageIcon image;
+	int width = 20;
+	int height = 20;
+	public Key(int x, int y)
+	{
+		super(x, y);
+	}
+	
+	@Override
+	public void paint(Graphics g, Level a) {
+		g.fillRect(getXPos(),getYPos(),getWidth(),getHeight());	
+	}	
+}

@@ -1,0 +1,104 @@
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+
+
+public class LevelTest extends Level  {
+	public LevelTest()
+	{
+		super();
+		scoreObjects.add(new ScoreObject(300,120));
+		scoreObjects.add(new ScoreObject(50,100));
+		scoreObjects.add(new ScoreObject(80,200));
+		scoreObjects.add(new ScoreObject(150,150));
+		platforms.add(new Platform(0, getHeight()-GROUNDHEIGTH, getWidth(), GROUNDHEIGTH, 0.7));
+
+		platforms.add(new Platform(10, 150, 200, 20, 0.9));
+		platforms.add(new Platform(610, 350, 100, 20, 0.8));
+		platforms.add(new Platform(210, 150, 100, 20, 0.7));
+		platforms.add(new Platform(810, 50, 100, 20, 0.6));
+		platforms.add(new Platform(1100, 150, 100, 20, 0.1));
+
+		keys.add(new Key(230,0));
+		keys.add(new Key(520,150));
+		keys.add(new Key(140,120));
+		gate = new Gate(500,getHeight()-50-GROUNDHEIGTH,3);
+		net = new Net(700,getHeight()-50-GROUNDHEIGTH,3);
+		//player.setMass(500);
+
+		spheres.add(new Sphere(390,30,20,20,300));
+		spheres.add(new Sphere(240,70,10,10,70));
+		spheres.add(new Sphere(20,240,10,10,30));
+		
+		springs.add(new Spring(10, 450, 50, 50, 10));
+		gravity = 9;
+	}
+	
+	public static void main(String[]args){
+		new LevelTest();
+	}
+	
+	@Override
+	public void paintComponent(Graphics g){
+		super.paintComponent(g);
+		g.drawImage(background, 0, 0, getWidth(), getHeight(), null );
+		g.drawLine(310,150,700,getHeight()-GROUNDHEIGTH);
+		//System.out.println(getHeight()-GROUNDHEIGTH);
+		g.setColor(Color.white);
+		g.drawString("Score: "+score, 0, 10);
+		g.drawString("Time elapsed: "+ minutes + ":" + seconds + ":" + milliseconds,0,20);
+		g.drawString("Keys in the map : "+gate.getNumberOfLocks(),0,30);
+		g.drawString("Keys collected: "+keysCollected,0,40);
+		ifUnlocked(g);
+		g.setColor(Color.cyan);
+
+		player.paint(g,this);
+		
+		gate.paint(g,this);
+		net.paint(g,this);
+		
+
+		
+		for(int i = 0; i<scoreObjects.size();i++)
+			scoreObjects.get(i).paint(g,this);
+		for(int i = 0; i<platforms.size();i++)
+			platforms.get(i).paint(g,this);
+		for(int i = 0; i<keys.size();i++)
+			keys.get(i).paint(g,this);
+		for(int i = 0; i<springs.size();i++)
+			springs.get(i).paint(g, this);
+		
+		for(int i = 0; i<spheres.size();i++)
+			spheres.get(i).paint(g,this);
+		
+	
+
+		hitDetection();
+	}
+	
+	public void hitDetection()
+	{
+		accCalc(player);
+		hitDetectionPlatforms();
+		hitDetectionSpring(player);
+		for(int i = 0; i<spheres.size();i++)
+		hitDetectionSpring(spheres.get(i));
+		calculateForce();	
+		hitDetectionNet();
+		slideDetected(310,150,700,480,player);
+		for(int i = 0; i<spheres.size();i++)
+		slideDetected(310,150,700,480,spheres.get(i));
+		//hitDetectionPlatforms(spheres.get(0));
+		hitDetectionScoreObjects();
+		hitDetectionKeys();
+		levelCompleted();
+		//PPCombinedSpringDetection();
+	}
+
+	
+	public int levelComplete() {
+		return 0;
+	}
+}

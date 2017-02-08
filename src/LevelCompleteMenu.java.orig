@@ -1,0 +1,75 @@
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.MouseInfo;
+import java.awt.Point;
+import java.awt.PointerInfo;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+
+import javax.swing.ImageIcon;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+
+public class LevelCompleteMenu extends JPanel implements KeyListener{
+	Image image = new ImageIcon("GUI_Images/statBar.png").getImage();
+	boolean resumeClicked, highScore, bestTime;
+	int score, minutes, seconds, milliseconds;
+	
+	public LevelCompleteMenu(){	}
+	
+	public LevelCompleteMenu(int score, int minutes, int seconds, int milliseconds, boolean time, boolean highScore)
+	{
+		
+		this.score = score;
+		this.minutes = minutes;
+		this.seconds = seconds;
+		this.milliseconds = milliseconds;
+		bestTime = time;
+		this.highScore = highScore;
+		addKeyListener(this);
+		setFocusable(true);
+	}
+	public void paintComponent(Graphics g){
+		super.paintComponent(g);
+		g.drawImage(image, 0, 0, 400, 150, null);
+		g.drawString(("Score " + score), 100, 100);
+		if(seconds>9)
+			g.drawString(("Time "+minutes+":"+seconds+":"+milliseconds), 100, 110);
+		else
+			g.drawString(("Time "+minutes+":0"+seconds+":"+milliseconds), 100, 110);
+		g.setColor(Color.RED);
+		if(highScore)
+			g.drawString("New High Score!", 200, 100);
+		if(bestTime)
+			g.drawString("New Best Time!", 200, 110);
+		g.setColor(Color.BLACK);
+	}
+	
+
+	@Override
+	public void keyPressed(KeyEvent e) {
+		// TODO Auto-generated method stub
+		if(e.getKeyCode()==KeyEvent.VK_T){
+			System.out.println("s");
+			if(Game.scoreFrame.isVisible())
+				Game.scoreFrame.setVisible(false);
+			repaint();
+			validate();
+		}
+	}
+
+	@Override
+	public void keyReleased(KeyEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void keyTyped(KeyEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+}

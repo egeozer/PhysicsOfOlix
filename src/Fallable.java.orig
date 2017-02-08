@@ -1,0 +1,45 @@
+import java.awt.Graphics;
+
+
+public abstract class Fallable extends ContactableObject {
+
+	double xVelocity;
+	double yVelocity ;
+	int xPos;
+	int yPos;
+	
+	public Fallable(int x, int y) {
+		super(x, y);
+	}
+	
+	public int getxPos() {
+		return xPos;
+	}
+	public void setxPos(int xPos) {
+		this.xPos = xPos;
+	}
+	public int getyPos() {
+		return yPos;
+	}
+	public void setyPos(int yPos) {
+		this.yPos = yPos;
+	}
+	public double getxVelocity() {
+		return xVelocity;
+	}
+	public void setxVelocity(double xVelocity) {
+		this.xVelocity = xVelocity;
+	}
+	public double getyVelocity() {
+		return yVelocity;
+	}
+	public void setyVelocity(double yVelocity) {
+		this.yVelocity = yVelocity;
+	}
+	
+	public abstract boolean isFalling();
+
+	
+
+
+}

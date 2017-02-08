@@ -1,0 +1,1002 @@
+import java.applet.Applet;
+import java.applet.AudioClip;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontFormatException;
+import java.awt.Graphics;
+import java.awt.GraphicsEnvironment;
+import java.awt.Image;
+import java.awt.MouseInfo;
+import java.awt.Point;
+import java.awt.PointerInfo;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
+
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+//
+public class Level extends JPanel implements MouseListener{
+	protected Player player = new Player();
+	protected ArrayList<ContactableObject> scoreObjects = new ArrayList<>();
+	protected ArrayList<ContactableObject> platforms = new ArrayList<>();
+	protected ArrayList<ContactableObject> keys = new ArrayList<>();
+	protected ArrayList<ContactableObject> springs = new ArrayList<>();
+	protected ArrayList<Fallable> polygons = new ArrayList<>();
+	
+	protected ArrayList<ContactableObject> scoreObjectsCopy = new ArrayList<>();
+	protected ArrayList<ContactableObject> platformsCopy = new ArrayList<>();
+	protected ArrayList<ContactableObject> keysCopy = new ArrayList<>();
+	protected ArrayList<ContactableObject> springsCopy = new ArrayList<>();
+	protected ArrayList<Fallable> polygonsCopy = new ArrayList<>();
+	
+    URL url = this.getClass().getClassLoader().getResource("sounds/jump1.wav");
+    URL url2 = this.getClass().getClassLoader().getResource("sounds/coinP.wav");
+    URL url4 = this.getClass().getClassLoader().getResource("sounds/keys.wav");
+    
+	Image background =  new ImageIcon("GUI_Images/background.png").getImage();
+	Image backgroundSky =  new ImageIcon("GUI_Images/sky.png").getImage();
+	
+	InputStream fontInput = Level.class.getResourceAsStream("font/goudyo.ttf");
+	
+	protected final int GROUNDHEIGHT=30;
+	protected Gate gate;
+	protected double gravity;
+	protected int keysCollected = 0;
+	protected int polygonsCollected = 0;
+	protected int score = 0;
+	protected int milliseconds = 0;
+	protected int seconds = 0;
+	protected int minutes = 0;
+	protected Net net;
+	protected double force = 0;
+	protected double coefficient = 0.5;
+	protected int currentPoly = -1;
+	protected int currentSpring = -1;
+	protected int k = 0;
+	protected boolean slowLeft = false;
+	protected boolean slowRight = false;
+	protected boolean isDead = false;
+	protected boolean warning = false;
+
+	protected ArrayList<Integer> contactedSprings = new ArrayList<>();
+	protected Timer game = new Timer(20, new GameRunner());
+	protected Timer time = new Timer(20, new TimerListener());
+	protected AudioClip keyS = Applet.newAudioClip(url4);
+	protected AudioClip jump = Applet.newAudioClip(url);
+	protected AudioClip scoreS = Applet.newAudioClip(url2);
+	Font sizedFont=null;
+	
+	public Level(){	
+		try {
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            //registering the font in the registry
+            ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("font/Goudy Old Style.ttf")));
+        } 
+		catch (IOException e) {
+            e.printStackTrace();
+        }
+		catch(FontFormatException e){
+			e.printStackTrace();
+		}
+		
+		setSize(1500,700);
+		game.start();
+		time.start();
+		addMouseListener(this);
+	}
+	//all levels will paint the following objects
+	public void paintComponent(Graphics g){
+		dataMonitor(g);
+		
+		ifUnlocked(g);
+		
+		g.setColor(Color.black);
+		player.paint(g,this);
+		if(net!=null)
+		if(net.xPos != 0)
+			net.paint(g,this);
+		gate.paint(g,this);
+		for(int i = 0; i<platforms.size();i++)
+			platforms.get(i).paint(g,this);
+		for(int i = 0; i<springs.size();i++)
+			springs.get(i).paint(g,this);
+		for(int i = 0; i<polygons.size();i++)
+			polygons.get(i).paint(g,this);
+		for(int i = 0; i<scoreObjects.size();i++)
+			scoreObjects.get(i).paint(g,this);
+		for(int i = 0; i<keys.size();i++)
+			keys.get(i).paint(g,this);
+		
+		hitDetection();
+	}
+	//data monitor method where the important data is showed in game
+	public void dataMonitor(Graphics g){	
+		g.setColor(Color.black);
+		g.drawRect(0,0,180,150);
+		g.drawRect(0,0,183,153);
+		
+		g.setFont(new Font("Goudy Old Style",Font.BOLD,30));
+		g.drawString("Score: "+score, 5, 30);
+		
+		g.setFont(new Font("Goudy Old Style", Font.BOLD, 18));
+		
+		g.drawString("Keys in map : "+gate.getNumberOfLocks(),5,60);
+		if(warning)
+			g.setColor(Color.RED);
+		else
+			g.setColor(Color.BLACK);
+		
+		g.drawString("Keys collected: "+keysCollected,5,80);
+		g.drawString("polygons in map: "+polygons.size(),5,100);
+		g.drawString("polygons collected: "+polygonsCollected,5,120);
+		g.setColor(Color.BLACK);
+		
+		g.setFont(new Font("Goudy Old Style", Font.BOLD, 15));
+		String time;
+		if(seconds>=10)
+			time = "Time elapsed: "+ minutes + ":" + seconds + ":" + milliseconds;
+		else
+			time = "Time elapsed: "+ minutes + ":0" + seconds + ":" + milliseconds;
+		g.drawString(time,5,140);
+		
+		if(isDead){
+			g.setFont(new Font("Goudy Old Style", Font.PLAIN, 40));
+			g.setColor(Color.red);
+			g.drawString("Uh oh, you are trapped! You need to restart!",500,40);
+		}
+		g.setFont(new Font("Goudy Old Style", Font.PLAIN, 14));
+		g.setColor(Color.black);
+		
+		g.drawString("Total Score "+Game.totalScore,5,45);
+	}
+	//method that resets all the values to its empty value
+	public void resetLevel(){	
+		isDead=false;
+		scoreObjects=(ArrayList<ContactableObject>) scoreObjectsCopy.clone();
+		keys=(ArrayList<ContactableObject>) keysCopy.clone();
+		polygons.clear();
+		for(int i=0; i<polygonsCopy.size(); i++)
+		{
+			if(((Polygon)polygonsCopy.get(i)).isSphere)
+				polygons.add(new Sphere(polygonsCopy.get(i).xPos, polygonsCopy.get(i).yPos, polygonsCopy.get(i).width, polygonsCopy.get(i).height, polygonsCopy.get(i).mass));
+			else
+				polygons.add(new Cube(polygonsCopy.get(i).xPos, polygonsCopy.get(i).yPos, polygonsCopy.get(i).width, polygonsCopy.get(i).height, polygonsCopy.get(i).mass));
+		}
+		keysCollected=0;
+		polygonsCollected=0;
+		score = 0;
+		milliseconds = 0;
+		seconds = 0;
+		minutes = 0;
+		player.xPos=0;
+		player.yPos=600;
+		currentPoly = -1;
+		currentSpring = -1;
+		player.currentPlatform = -1;
+	}
+	//giving gravity to any spcified Fallable object
+	public void accCalc(Fallable f){
+		if(f.isFalling()){
+			f.yVelocity+=gravity*.2;
+			f.yPos+=f.yVelocity*.2+.5*gravity*.2*.2;
+			
+			if(f.yPos<0)
+			{
+				f.yVelocity=0;
+				f.yPos = 0;
+			}
+		}	
+	}
+	//setting the hit detection to all contactable objects
+	public void hitDetection()	
+	{
+		accCalc(player);
+		hitDetectionPlatforms();
+		if(springs.size()>0)
+		{
+			for(int i = 0; i<polygons.size();i++)
+				hitDetectionSpring(polygons.get(i));
+			hitDetectionSpring(player);
+			stretchSprings();
+		}
+		calculateForce();
+		if(net!=null)
+		if(net.xPos != 0)
+			hitDetectionNet();
+		if(scoreObjects.size()>0)
+			hitDetectionScoreObjects();
+		if(keys.size()>0)
+			hitDetectionKeys();
+		if(slowLeft)
+			slowLeft();
+		else if(slowRight)
+			slowRight();
+	}
+	//hitDetected method for an arrayList of Contactable Objects (i.e platforms) and player or a polygon
+	public int hitDetected(ArrayList<ContactableObject> a, Fallable f){
+		for(int i = 0; i<a.size();i++){
+			if(a.get(i).x2>-1)
+			{
+				if(slideDetected(a.get(i), f) == 1)
+				{
+					return i;
+				}
+			}
+			else
+			{
+				if(f.xPos+f.width*2/3>=a.get(i).getXPos() && f.xPos<=(a.get(i).getXPos()+a.get(i).getWidth()-f.width/3)
+						&& f.yPos<=a.get(i).getYPos()+a.get(i).getHeight() && f.yPos+f.height>=a.get(i).getYPos())
+					return i;
+			}
+		}
+		return -1;
+	}
+	
+	public int hitDetectedPolyPlayer(ArrayList<Fallable> a, Fallable f){	//hit detection between polygons and the player
+		for(int i = 0; i<a.size();i++){
+			if(f.xPos+f.width>=a.get(i).getXPos() && f.xPos<=(a.get(i).getXPos()+a.get(i).getWidth())
+					&& f.yPos<=a.get(i).getYPos()+a.get(i).getHeight() && f.yPos+f.height>=a.get(i).getYPos())
+			return i;
+		}
+		return -1;
+	}
+	//hit detection between a polygon and a single object(i.e: net)
+	public int hitDetectedPolySingleObject(ArrayList<Fallable> a, ContactableObject f){	
+		for(int i = 0; i<a.size();i++){
+			if(f.xPos+f.width>=a.get(i).getXPos() && f.xPos<=(a.get(i).getXPos()+a.get(i).getWidth())
+					&& f.yPos<=a.get(i).getYPos()+a.get(i).getHeight() && f.yPos+f.height>=a.get(i).getYPos()){
+				return i;
+			}
+		}
+		return -1;
+	}
+	//hit detection between the player and a single conctactable Object like the gate or the net
+	public boolean hitDetectedSingleObject(ContactableObject a){	
+		if(player.xPos>=a.getXPos() && player.xPos<=(a.getXPos()+a.getWidth())
+				&& player.yPos<=a.getYPos()+a.getHeight() && player.yPos+player.height>=a.getYPos())
+			return true;
+		else
+			return false;
+	}
+	
+	//General hit detection for springs
+	public void hitDetectionSpring(Fallable f)	
+	{
+		int index;
+		index = hitDetected(springs,f);
+		if(index != -1)
+		{
+			if(f.yVelocity>=0)
+			{
+				f.setFalling(false);
+				f.yVelocity = 0;
+				f.yPos = springs.get(index).getYPos() - f.height;
+				currentSpring = index;
+				compressSpring(index, f);
+				contactedSprings.add(index);
+			}
+			else
+			{
+				f.yVelocity = 0;
+				f.yPos = springs.get(index).getYPos() + springs.get(index).getHeight() +1;
+			}
+		}
+		else 
+		{
+			currentSpring = -1;
+		}
+	}
+	public void compressSpring(int i, Fallable f)
+	{
+		ContactableObject spring = springs.get(i);
+		if(f!=null)
+		{
+			double force = f.getMass()*gravity - spring.springConstant*spring.extension;
+			if(force>0)
+			{
+				spring.yPos++;
+				spring.height--;
+				spring.extension++;
+				f.yPos++;
+			}
+			else if(force<0)
+			{
+				if(springs.get(i).decompressDelay==0)
+				{
+					spring.yPos--;
+					spring.height++;
+					spring.extension--;
+					f.yPos--;
+				}
+				else
+					springs.get(i).decompressDelay--;
+			}
+		}
+		else if(spring.extension!=0)
+		{
+			spring.yPos--;
+			spring.height++;
+			spring.extension--;
+		}
+	}
+	public void stretchSprings()
+	{
+		boolean contact = false;
+		for(int i=0; i<springs.size(); i++)
+		{
+			for(int x=0; x<contactedSprings.size(); x++)
+			{
+				if(i==contactedSprings.get(x))
+				{
+					contact = true;
+					springs.get(i).decompressDelay = 4;
+				}
+			}
+			if(!contact)
+			{
+				if(springs.get(i).decompressDelay==0)
+				{
+					compressSpring(i, null);
+				}
+				else
+					springs.get(i).decompressDelay--;
+			}
+			contact = false;
+		}
+		contactedSprings.clear();
+	}
+	public int combinedSpringDetection(){
+		int index = hitDetectedPolyPlayer(polygons,player);
+		if(index>-1 && hitDetected(springs,player)>-1){
+			return hitDetectedPolyPlayer(polygons,player);
+		}
+		return -1;
+	}
+	
+	public void hitDetectionPlatforms()
+	{
+		for(int i = 0; i<polygons.size();i++){
+			accCalc(polygons.get(i));
+			if(polygons.get(i).currentPlatform == -1 || platforms.get(polygons.get(i).currentPlatform).x2==-1)
+				hitDetectionPlatforms(polygons.get(i));	
+			else
+				slipping(polygons.get(i));
+		}
+		if(player.currentPlatform == -1 || platforms.get(player.currentPlatform).x2 == -1)
+		{
+			hitDetectionPlatforms(player);
+		}
+		else
+		{
+			slipping(player);
+		}
+	}
+	public void hitDetectionPlatforms(Fallable f){
+		int index;
+		index = hitDetected(platforms,f);
+		
+		if(index != -1)
+		{
+			if(platforms.get(index).x2>-1)
+			{
+				if(f.yVelocity>=0)
+				{
+					f.setFalling(false);
+					f.yVelocity = 0;
+					if(platforms.get(index).angle==90)
+					{
+						f.yPos = calculateYPos(platforms.get(index), f);
+					}
+					else if(platforms.get(index).angle<90)
+					{
+						f.yPos = calculateYPos(platforms.get(index), f)-40;
+					}
+					else
+					{
+						f.yPos = calculateYPos(platforms.get(index), f)-20;
+					}
+					f.currentPlatform = index;
+				}
+			}
+			else if(f.yVelocity>=0)
+			{
+				if(f==player)
+				{
+					if(platforms.get(index).dead)
+					{
+						isDead=true;
+					}
+				}
+				f.setFalling(false);
+				f.yVelocity = 0;
+				f.yPos = platforms.get(index).getYPos() - f.height;
+				f.currentPlatform = index;
+			}
+			else
+			{
+				f.yVelocity = 0;
+				f.yPos = platforms.get(index).getYPos() + platforms.get(index).getHeight() +1;
+			}
+		}
+		else 
+		{
+			f.currentPlatform = -1;
+			if(f.yPos>=(this.getHeight()-f.height))
+			{
+				f.setFalling(false);
+				f.yPos = this.getHeight()-f.height;
+			}
+			else
+				f.setFalling(true);
+		}
+	}
+	
+	public int slideDetected(ContactableObject a, Fallable f){
+		int distanceAB = (int)Math.sqrt((a.x2-a.xPos)*(a.x2-a.xPos)+(a.y2-a.yPos)*(a.y2-a.yPos));
+		int distanceAC = (int)Math.sqrt((f.getXPos()-a.xPos)*(f.getXPos()-a.xPos)+(f.getYPos()-a.yPos)*(f.getYPos()-a.yPos));
+		int distanceBC = (int)Math.sqrt((a.x2-f.getXPos())*(a.x2-f.getXPos())+(a.y2-f.getYPos())*(a.y2-f.getYPos()));
+		double slope = (a.y2-a.yPos)/(a.x2-a.xPos);
+		
+		if(((distanceAC+distanceBC)==distanceAB)||((distanceAC+distanceBC)==distanceAB+1)||((distanceAC+distanceBC)==distanceAB+2)){
+			return 1;
+		}
+		else
+			return -1;
+	}
+	public int calculateYPos(ContactableObject a, Fallable f)
+	{
+		int xLength;
+		int yLength;
+		if(a.yPos>a.y2)
+			yLength = this.getHeight()-a.yPos-GROUNDHEIGHT;
+		else
+			yLength = this.getHeight()-a.y2;
+		double angle = a.angle;
+		if(angle<90)
+		{
+			angle = Math.toRadians(90-angle);
+			xLength = f.xPos - a.xPos;
+			return this.getHeight() - (int)(xLength*Math.tan(angle))-yLength-f.height;
+		}
+		else
+		{
+			angle = Math.toRadians(angle-270);
+			xLength = a.xPos - f.xPos;
+			return this.getHeight() - (int)(xLength*Math.tan(angle))-yLength-f.height;
+		}
+	}
+	public void onAngledPlatform(Fallable f)
+	{
+		ContactableObject platform = platforms.get(f.currentPlatform);
+		if(((f.xPos+f.width/2)<platform.xPos && (f.xPos+f.width/2) < platform.x2)||(f.xPos>platform.xPos&&f.xPos>platform.x2))
+		{
+			if(platforms.get(f.currentPlatform).angle!=90)
+			{
+				if(platforms.get(f.currentPlatform).angle<90)
+				{
+					f.yPos += 40;
+				}
+				else
+				{
+					f.yPos += 20;
+				}
+			}
+			hitDetectionPlatforms(f);
+		}
+	}
+	public void slipping(Fallable f)
+	{
+		ContactableObject platform = platforms.get(f.currentPlatform);
+		if(platform.angle!=90)
+		{
+			if(platform.angle<90)
+			{
+				double angle = platform.angle;
+				double downForce = f.mass*gravity;
+				double normalForce = downForce*Math.cos(Math.toRadians(angle));
+				double frictionForce = normalForce*platform.friction;
+				double counterForce = downForce/Math.sin(Math.toRadians(angle));
+				double slip = counterForce-frictionForce;
+				if(slip>0)
+				{
+					f.xPos-=slip/400;
+					f.yPos = calculateYPos(platform, f)-40;
+				}
+			}
+			else
+			{
+				double angle = platform.angle-270;
+				double downForce = f.mass*gravity;
+				double normalForce = downForce*Math.cos(Math.toRadians(angle));
+				double frictionForce = normalForce*platform.friction;
+				double counterForce = downForce/Math.sin(Math.toRadians(angle));
+				double slip = counterForce-frictionForce;
+				if(slip>0)
+				{
+					f.xPos+=slip/400;
+					f.yPos = calculateYPos(platform, f)-20;
+				}
+			}
+			onAngledPlatform(f);
+		}
+	}
+	
+	public void hitDetectionScoreObjects(){
+		int index;
+		if(scoreObjects.size()>0){
+			index = hitDetected(scoreObjects, player);
+			if(index!=-1){
+				if(OptionsMenu.j%2==0)
+				scoreS.play();
+				score+=50;
+				scoreObjects.remove(index);
+			}
+		}
+	}
+	
+	public void hitDetectionKeys()
+	{
+		int index;
+		if(keys.size()>0){
+			index = hitDetected(keys, player);
+			if(index!=-1 ){
+				if(OptionsMenu.j%2==0)
+				keyS.play();
+				keysCollected+=1;
+				keys.remove(index);
+			}	
+		}
+	}
+	
+	public void hitDetectionNet()
+	{
+		int index;
+		if(polygons.size()>0){
+			index = hitDetectedPolySingleObject(polygons, net);
+			if(index!=-1){
+				polygonsCollected+=1;
+				polygons.remove(index);
+				currentPoly = -1;
+			}	
+		}
+	}
+	
+	public boolean levelCompleted()
+	{
+		if(net!=null){
+			if((hitDetectedSingleObject(gate) && gate.getNumberOfLocks()==keysCollected) && net.getNumberOfPolygons()==polygonsCollected )
+				return true;
+			}
+		
+		else if(net==null)
+			if((hitDetectedSingleObject(gate) && gate.getNumberOfLocks()==keysCollected) ){
+				return true;
+			}
+		return false;
+	}
+	public void ifUnlocked(Graphics g){
+		g.setFont(new Font("Goudy Old Style", Font.BOLD, 30));
+		g.setColor(Color.black);
+		if(net!=null){
+			if( gate.getNumberOfLocks()==keysCollected && net.getNumberOfPolygons()==polygonsCollected ){
+				warning=false;
+				g.drawString("The gate is unlocked!", 200, 40);
+			}
+			if((hitDetectedSingleObject(gate) && (gate.getNumberOfLocks()!=keysCollected) || net.getNumberOfPolygons()!=polygonsCollected) ){
+				warning=true;
+			}
+			else warning=false;
+		}
+		else {
+			if( gate.getNumberOfLocks()==keysCollected){
+				warning=false;
+
+				g.drawString("The gate is unlocked!", 200, 40);
+			}
+			if(hitDetectedSingleObject(gate) && (gate.getNumberOfLocks()!=keysCollected))
+				warning=true;
+			else warning=false;
+		}
+	}
+	
+	public boolean hitDetectionRight()
+	{
+		if(currentPoly > -1)
+		{
+			if(player.xPos+player.width+player.xVelocity+polygons.get(currentPoly).width>this.getWidth())
+			{
+				return true;
+			}
+		}
+		else if(player.xPos+player.width+player.xVelocity>this.getWidth())
+			return true;
+		for(int i=0; i<platforms.size(); i++)
+		{
+			if(platforms.get(i).x2==-1)
+			{
+				if(!((player.xPos <= (platforms.get(i).getXPos()+platforms.get(i).getWidth()-player.width/3))&&((player.xPos+player.width*2/3) >= platforms.get(i).getXPos())))
+				{
+					if(((player.xPos+player.xVelocity) <= (platforms.get(i).getXPos()+platforms.get(i).getWidth()-player.width/3))&&((player.xPos+player.width*2/3+player.xVelocity) >= platforms.get(i).getXPos()))
+					{
+						if(player.yPos<=platforms.get(i).getYPos()+platforms.get(i).getHeight() && player.yPos+player.height>=platforms.get(i).getYPos())
+						{
+							return true;
+						}
+					}
+				}
+			}
+		}
+		for(int i=0; i<springs.size(); i++)
+		{
+			if(!((player.xPos <= (springs.get(i).getXPos()+springs.get(i).getWidth()-player.width/3))&&((player.xPos+player.width*2/3) >= springs.get(i).getXPos())))
+			{
+				if(((player.xPos+player.xVelocity+1) <= (springs.get(i).getXPos()+springs.get(i).getWidth()-player.width/3))&&((player.xPos+player.width*2/3+player.xVelocity+1) >= springs.get(i).getXPos()))
+				{
+					if(player.yPos<=springs.get(i).getYPos()+springs.get(i).getHeight() && player.yPos+player.height>=springs.get(i).getYPos())
+					{
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+	public boolean hitDetectionLeft()
+	{
+		if(currentPoly > -1)
+		{
+			if(player.xPos+player.xVelocity-polygons.get(currentPoly).width<0)
+			{
+				return true;
+			}
+		}
+		else if(player.xPos+player.xVelocity<0)
+			return true;
+		for(int i=0; i<platforms.size(); i++)
+		{
+			if(platforms.get(i).x2==-1)
+			{
+				if(!((player.xPos <= (platforms.get(i).getXPos()+platforms.get(i).getWidth()-player.width/3))&&((player.xPos+player.width*2/3) >= platforms.get(i).getXPos())))
+				{
+					if(((player.xPos-player.xVelocity-1) <= (platforms.get(i).getXPos()+platforms.get(i).getWidth()-player.width/3))&&((player.xPos+player.width*2/3-player.xVelocity-1) >= platforms.get(i).getXPos()))
+					{
+						if(player.yPos<=platforms.get(i).getYPos()+platforms.get(i).getHeight() && player.yPos+player.height>=platforms.get(i).getYPos())
+						{
+							return true;
+						}
+					}
+				}
+			}
+		}
+		for(int i=0; i<springs.size(); i++)
+		{
+			if(!((player.xPos <= (springs.get(i).getXPos()+springs.get(i).getWidth()-player.width/3))&&((player.xPos+player.width*2/3) >= springs.get(i).getXPos())))
+			{
+				if(((player.xPos-player.xVelocity-1) <= (springs.get(i).getXPos()+springs.get(i).getWidth()-player.width/3))&&((player.xPos+player.width*2/3-player.xVelocity-1) >= springs.get(i).getXPos()))
+				{
+					if(player.yPos<=springs.get(i).getYPos()+springs.get(i).getHeight() && player.yPos+player.height>=springs.get(i).getYPos())
+					{
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+	public void calculateForce()
+	{
+		if(player.falling)
+		{
+			if(slowRight||slowLeft)
+				force = player.mass*gravity*0.1;
+			else
+				force = 0;
+		}
+		else
+		{
+			if(player.currentPlatform !=-1)
+			{
+				force = player.mass*gravity*platforms.get(player.currentPlatform).friction;
+				if(currentPoly > -1)
+				{
+					force += polygons.get(currentPoly).mass*gravity*platforms.get(player.currentPlatform).friction;
+				}
+			}
+			else
+			{
+				force = player.mass*gravity*coefficient;
+				if(currentPoly > -1)
+				{
+					force += polygons.get(currentPoly).mass*gravity*coefficient;
+				}
+			}
+		}
+	}
+	public void right()
+	{
+		slowLeft = false;
+		if(milliseconds == 160 || milliseconds == 660)
+		{
+			player.rightIndex = 1;
+		}
+		else if(milliseconds == 340 || milliseconds == 840)
+		{
+			player.rightIndex = 2;
+		}
+		else if(milliseconds == 0 || milliseconds == 500)
+		{
+			player.rightIndex = 0;
+		}
+		if(!slowRight)
+		{
+			player.currentImage = player.right[player.rightIndex];
+			if(!player.isFalling())
+				player.xVelocity += ((player.accelForce-force)/player.mass)/50;
+		}
+		for(int i=(int)player.xVelocity; i>0; i--)
+		{
+			if(!hitDetectionRight()){
+				player.xPos += player.xVelocity;
+				if(player.currentPlatform > -1 && platforms.get(player.currentPlatform).x2>-1)
+				{
+					if(platforms.get(player.currentPlatform).angle==90)
+					{
+						player.yPos=calculateYPos(platforms.get(player.currentPlatform), player);
+					}
+					else if(platforms.get(player.currentPlatform).angle<90)
+					{
+						player.yPos=calculateYPos(platforms.get(player.currentPlatform), player)-40;
+					}
+					else
+					{
+						player.yPos=calculateYPos(platforms.get(player.currentPlatform), player)-20;
+					}
+					onAngledPlatform(player);
+				}
+			}
+			else
+			{
+				player.xVelocity = 1;
+			}
+		}
+	}
+	public void left()
+	{
+		slowRight = false;
+		if(milliseconds == 160 || milliseconds == 660)
+		{
+			player.leftIndex = 1;
+		}
+		else if(milliseconds == 340 || milliseconds == 840)
+		{
+			player.leftIndex = 2;
+		}
+		else if(milliseconds == 0 || milliseconds == 500)
+		{
+			player.leftIndex = 0;
+		}
+		if(!slowLeft)
+		{
+			player.currentImage = player.left[player.leftIndex];
+			if(!player.isFalling())
+				player.xVelocity += ((player.accelForce-force)/player.mass)/50;
+		}
+		for(int i=(int)player.xVelocity; i>0; i--)
+		{
+			if(!hitDetectionLeft())
+			{
+				player.xPos -= player.xVelocity;
+				if(player.currentPlatform > -1 && platforms.get(player.currentPlatform).x2>-1)
+				{
+					if(platforms.get(player.currentPlatform).angle==90)
+					{
+						player.yPos=calculateYPos(platforms.get(player.currentPlatform), player);
+					}
+					else if(platforms.get(player.currentPlatform).angle<90)
+					{
+						player.yPos=calculateYPos(platforms.get(player.currentPlatform), player)-40;
+					}
+					else
+					{
+						player.yPos=calculateYPos(platforms.get(player.currentPlatform), player)-20;
+					}
+					onAngledPlatform(player);
+				}
+			}
+			else
+			{
+				player.xVelocity = 1;
+			}
+		}
+	}
+	public void space()
+	{
+		if(!player.falling)
+		{
+			player.falling = true;
+			slowLeft = false;
+			slowRight = false;
+			player.currentPlatform = -1;
+			if(OptionsMenu.j%2==0)
+				jump.play();
+			if(currentSpring==-1)
+				player.yVelocity =-60;
+			else
+			{
+				player.yVelocity=-60-(springs.get(currentSpring).extension*springs.get(currentSpring).springConstant)/5;
+			}
+		}
+	}
+	public void polygonJump(Fallable f){
+		if(!f.falling){
+			f.falling = true;
+			f.yVelocity =-60-(springs.get(currentSpring).extension*springs.get(currentSpring).springConstant)/5;
+		}	
+	}
+	public void x()
+	{
+		if(player.falling)
+			currentPoly = -1;
+		else if(currentPoly==-1)
+			currentPoly = hitDetectedPolyPlayer(polygons, player);
+	}
+	public void xRight()
+	{
+		x();
+		if(currentPoly>-1)
+		{
+			if(polygons.get(currentPoly).falling)
+				currentPoly=-1;
+			else if(!hitDetectionRight()){
+				polygons.get(currentPoly).xPos = player.xPos + (player.width/2);
+				if(polygons.get(currentPoly).currentPlatform>-1 && platforms.get(polygons.get(currentPoly).currentPlatform).x2>-1)
+				{
+					if(platforms.get(player.currentPlatform).angle==90)
+						player.yPos=calculateYPos(platforms.get(player.currentPlatform), player);
+					else if(platforms.get(polygons.get(currentPoly).currentPlatform).angle<90)
+						polygons.get(currentPoly).yPos = calculateYPos(platforms.get(polygons.get(currentPoly).currentPlatform), polygons.get(currentPoly))-40;
+					else
+						polygons.get(currentPoly).yPos = calculateYPos(platforms.get(polygons.get(currentPoly).currentPlatform), polygons.get(currentPoly))-20;
+					onAngledPlatform(polygons.get(currentPoly));
+				}
+			}	
+		}
+	}
+	public void xLeft()
+	{
+		x();
+		if(currentPoly>-1)
+		{
+			if(polygons.get(currentPoly).falling)
+				currentPoly=-1;
+			else if(!hitDetectionLeft()){
+				polygons.get(currentPoly).xPos = player.xPos - (player.width/2);
+				if(polygons.get(currentPoly).currentPlatform>-1 && platforms.get(polygons.get(currentPoly).currentPlatform).x2>-1)
+				{
+					if(platforms.get(polygons.get(currentPoly).currentPlatform).angle<90)
+						polygons.get(currentPoly).yPos = calculateYPos(platforms.get(polygons.get(currentPoly).currentPlatform), polygons.get(currentPoly))-40;
+					else
+						polygons.get(currentPoly).yPos = calculateYPos(platforms.get(polygons.get(currentPoly).currentPlatform), polygons.get(currentPoly))-20;
+					onAngledPlatform(polygons.get(currentPoly));
+				}
+			}
+		}
+	}
+	public void releasedRight()
+	{
+		player.currentImage = player.rest;
+		slowRight = true;
+	}
+	public void releasedLeft()
+	{
+		player.currentImage = player.restLeft;
+		slowLeft = true;
+	}
+	public void slowRight()
+	{
+		if(player.falling)
+			right();
+		else
+		{
+			player.xVelocity -= (((player.accelForce-force)/player.mass)/50);
+			if(player.xVelocity>0)
+			{
+				if(currentPoly == -1)
+					right();
+				else
+					xRight();
+			}
+			else
+			{
+				slowRight = false;
+				player.xVelocity = 1;
+			}
+		}	
+	}
+	public void slowLeft()
+	{
+		if(player.falling)
+			left();
+		else
+		{
+			player.xVelocity -= ((player.accelForce-force)/player.mass)/50;
+			if(player.xVelocity>0)
+			{
+				if(currentPoly == -1)
+					left();
+				else
+					xLeft();
+			}
+			else
+			{
+				slowLeft = false;
+				player.xVelocity = 1;
+			}
+		}
+	}
+	public class GameRunner implements ActionListener
+	{
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			repaint();
+		}
+	}
+	public class TimerListener implements ActionListener
+	{
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			milliseconds+=40;
+			if(milliseconds >= 1000)
+			{
+				milliseconds -= 1000;
+				seconds++;
+			}
+			if(seconds == 60)
+			{
+				seconds = 0;
+				minutes++;
+			}
+			if(player.xVelocity>=4)
+				player.xVelocity=4;
+		}
+	}
+
+	@Override
+	public void mouseClicked(MouseEvent e) {
+		PointerInfo c = MouseInfo.getPointerInfo();
+		Point b = c.getLocation();
+		SwingUtilities.convertPointFromScreen(b, e.getComponent());	//converting the mouseLocation into the panel
+
+		int x = (int) b.getX();
+		int y = (int) b.getY();
+		System.out.println(x+" "+y);
+	}
+	@Override
+	public void mouseEntered(MouseEvent e) {
+		// TODO Auto-generated method stub
+	}
+	@Override
+	public void mouseExited(MouseEvent e) {
+		// TODO Auto-generated method stub
+	}
+	@Override
+	public void mousePressed(MouseEvent e) {
+		// TODO Auto-generated method stub
+	}
+	@Override
+	public void mouseReleased(MouseEvent e) {
+		// TODO Auto-generated method stub
+	}
+}

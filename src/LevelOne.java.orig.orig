@@ -1,0 +1,123 @@
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.MouseInfo;
+import java.awt.Point;
+import java.awt.PointerInfo;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.util.ArrayList;
+
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+
+
+public class LevelOne extends Level  {
+	
+	
+	public LevelOne()
+	{
+		super();
+		platforms.add(new Platform(0, getHeight()-GROUNDHEIGTH, getWidth(), GROUNDHEIGTH, 0.5));
+
+		gate = new Gate(getWidth()-100,getHeight()-GROUNDHEIGTH-50,0);
+
+		gravity = 10;
+		net = new Net(0,getHeight()-50-GROUNDHEIGTH,0);
+		scoreObjects.add(new ScoreObject(200,getHeight()-GROUNDHEIGTH-new ScoreObject().height));
+		scoreObjects.add(new ScoreObject(230,getHeight()-GROUNDHEIGTH-new ScoreObject().height));
+		scoreObjects.add(new ScoreObject(260,getHeight()-GROUNDHEIGTH-new ScoreObject().height));
+		scoreObjects.add(new ScoreObject(560,500));
+		scoreObjects.add(new ScoreObject(590,500));
+
+
+		//scoreObjects.add(new ScoreObject(886,523));
+	
+
+		
+		
+
+
+
+
+		
+		
+		
+	//	setFocusable(true);
+
+	}
+
+	
+
+	public void paintComponent(Graphics g){
+		super.paintComponent(g);
+		g.drawImage(backgroundSky, 0, 0, getWidth(), getHeight(), null );
+		//g.drawLine(310,150,700,getHeight()-GROUNDHEIGTH);
+		//System.out.println(getHeight()-GROUNDHEIGTH);
+		dataMonitor(g);
+		ifUnlocked(g);
+		
+
+		g.setColor(Color.black);
+		player.paint(g,this);
+		
+		gate.paint(g,this);
+		for(int i = 0; i<platforms.size();i++)
+			platforms.get(i).paint(g,this);
+		
+		for(int i = 0; i<scoreObjects.size();i++)
+			scoreObjects.get(i).paint(g,this);
+		
+		
+
+		hitDetection();
+		
+
+		if(player.getXPos()>=0){
+			g.setFont(new Font("SansSerif", Font.ITALIC, 30));
+			g.drawString("Welcome to the Physics of Olix Tutorial level stages!",getWidth()/3,50);
+			}
+		if(player.getXPos()>=0){
+		
+			g.drawString("Use LEFT and RIGHT arrows to keys to walk around",getWidth()/3,100);
+			}
+		
+		if(player.getXPos()>=50){
+			
+			g.drawString("Collect coins for bonus score!",getWidth()/3,150);
+			}
+		
+		if(player.getXPos()>550){
+			
+			g.drawString("Walk into the gate to procede",getWidth()/3,200);
+			}
+	}
+	
+	
+	public void hitDetection()
+	{
+		accCalc(player);
+		hitDetectionPlatforms();
+		for(int i = 0; i<spheres.size();i++)
+			hitDetectionSpring(spheres.get(i));
+		hitDetectionSpring(player);
+		stretchSprings();
+		calculateForce();	
+		hitDetectionNet();
+		//slideDetected(310,150,700,480,player);
+		
+		
+		hitDetectionScoreObjects();
+		hitDetectionKeys();
+		levelCompleted();
+		
+	}
+
+
+
+	
+	
+}

@@ -1,0 +1,148 @@
+import java.awt.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
+import java.awt.image.*;
+
+import javax.swing.ImageIcon;
+
+
+public class Platform extends ContactableObject{
+	private int width, height;
+	private double friction, angle;
+	private ImageIcon icon = new ImageIcon("images/Possible Platform 2 (cropped).jpg");
+	BufferedImage image, rotatedImage;
+	//private ImageObserver imagge = new ImageObserver("images/Possible Platform 2 (cropped).jpg");
+	public Platform(int x, int y, int w, int h, double f)
+	{
+		super(x, y);
+		width = w;
+		height = h;
+		friction = f;
+		angle = 0;
+	}
+	public Platform(int x, int y, int w, int h, double f, double a)
+	{
+		super(x, y);
+		width = w;
+		height = h;
+		friction = f;
+		angle = a;
+		bufferedConvert();
+	}
+	public void bufferedConvert()
+	{
+		image = new BufferedImage(
+			    width,
+			    height,
+			    BufferedImage.TYPE_INT_RGB);
+			Graphics g = image.createGraphics();
+			g.drawImage(icon.getImage(), 0, 0, width, height, null);
+			// paint the Icon to the BufferedImage.
+			//icon.paintIcon(null, g, 0,0);
+			g.dispose();
+	}
+	public void rotateImage()
+	{
+		double rotationRequired = Math.toRadians(45);
+		double locationX = width/ 2;
+		double locationY = height/ 2;
+		//System.out.println("x " + locationX);
+		AffineTransform tx = AffineTransform.getRotateInstance(rotationRequired, locationX, locationY);
+		AffineTransformOp op = new AffineTransformOp(tx, AffineTransformOp.TYPE_BILINEAR);
+		rotatedImage = image = new BufferedImage(
+			    width,
+			    height,
+			    BufferedImage.TYPE_INT_RGB);
+		Graphics2D g2d = rotatedImage.createGraphics();
+		g2d.drawImage(op.filter(image, null), 0, 0, null);
+		//g2d.dispose();
+	}
+	public int getHeight()
+	{
+		return height;
+	}
+	public int getWidth()
+	{
+		return width;
+	}
+	public double getFriction()
+	{
+		return friction;
+	}
+	
+	
+	public static BufferedImage transform(BufferedImage image, int numquadrants) {
+	      int w0 = image.getWidth();
+	      int h0 = image.getHeight();
+	      int w1 = w0;
+	      int h1 = h0;
+
+	      int centerX = w0 / 2;
+	      int centerY = h0 / 2;
+
+	      if (numquadrants % 2 == 1) {
+	         w1 = h0;
+	         h1 = w0;
+	      }
+
+	      if (numquadrants % 4 == 1) {
+	         if (w0 > h0) {
+	            centerX = h0 / 2;
+	            centerY = h0 / 2;
+	         } else if (h0 > w0) {
+	            centerX = w0 / 2;
+	            centerY = w0 / 2;
+	         }
+	         // if h0 == w0, then use default
+	      } else if (numquadrants % 4 == 3) {
+	         if (w0 > h0) {
+	            centerX = w0 / 2;
+	            centerY = w0 / 2;
+	         } else if (h0 > w0) {
+	            centerX = h0 / 2;
+	            centerY = h0 / 2;
+	         }
+	         // if h0 == w0, then use default
+	      }
+
+	      AffineTransform affineTransform = new AffineTransform();
+	      affineTransform.setToQuadrantRotation(numquadrants, centerX, centerY);
+
+	      AffineTransformOp opRotated = new AffineTransformOp(affineTransform,
+	            AffineTransformOp.TYPE_BILINEAR);
+
+	      BufferedImage transformedImage = new BufferedImage(w1, h1,
+	            image.getType());
+
+	      transformedImage = opRotated.filter(image, transformedImage);
+	      return transformedImage;
+	   }
+	
+	
+	
+	@Override
+	public void paint(Graphics g, Level a) {
+		if(angle == 0)
+			g.drawImage(icon.getImage(), xPos, yPos, width, height, null);
+		else
+		{
+			double rotationRequired = Math.toRadians(angle);
+			//double locationX = image.getWidth()/2;
+			//double locationY = image.getHeight()/2;
+			double locationX = image.getWidth()/2;
+			double locationY = image.getHeight()*2;
+			//System.out.println("x " + locationX);
+			//AffineTransform tx = AffineTransform.getRotateInstance(rotationRequired, locationX, locationY);
+			AffineTransform tx = AffineTransform.getRotateInstance(rotationRequired, locationX, locationY);
+			AffineTransformOp op = new AffineTransformOp(tx, AffineTransformOp.TYPE_BILINEAR);
+			//rotateImage();*/
+			
+			//BufferedImage img = transform(image, 1);
+			//g.drawImage(img, xPos, yPos, null);
+			g.fillOval(xPos, yPos, height, width);
+			// Drawing the rotated image at the required drawing locations
+			g.drawImage(op.filter(image, null), xPos, yPos, null);
+			//g2d.drawImage(image, tx, null);
+		}
+	}
+}
